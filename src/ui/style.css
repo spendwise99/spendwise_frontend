@@ -1,0 +1,39 @@
+@import "tailwindcss";
+@import "vue-select/dist/vue-select.css";
+
+@theme {
+  --color-dark: #210f37; /* Background */
+  --color-midDark: #4f1c51; /* Cards, containers */
+  --color-accent: #bcbcbc; /* Updated: neutral light gray for buttons/highlights */
+  --color-text: #99bc85; /* Main text (soft green) */
+  --color-primary: #1a1a1a;
+  --color-gray: #a1a1aa;
+  --color-blue: #6d49b7;
+}
+
+p {
+  font-size: 14px;
+  color: var(--color-midDark);
+}
+
+h1 {
+  font-size: 20px;
+  color: var(--color-text);
+}
+
+span {
+  font-size: 15px;
+}
+
+:root {
+  background-color: var(--color-primary);
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
