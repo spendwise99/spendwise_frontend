@@ -3,7 +3,6 @@ import { ref, computed } from "vue";
 import CInput from "../components/CInput.vue";
 import staticData from "../store/utils";
 import CButton from "../components/CButton.vue";
-import BackButton from "../components/BackButton.vue";
 import { useUserStore } from "../store/userInfo";
 import { api, notify, uploadImage } from "../store/helpers";
 

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import BackButton from "../components/BackButton.vue";
 import CInput from "../components/CInput.vue";
 import {
   api,

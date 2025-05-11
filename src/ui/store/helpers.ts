@@ -82,7 +82,6 @@ import { useUserStore } from "./userInfo";
 import { usePayeeStore } from "./PayeesStore";
 
 export const api = axios.create({
-  // baseURL: "https://banking-management-system-backend-nine.vercel.app",
   baseURL: "https://spendwise-backend-roan.vercel.app",
 
   timeout: 10000,
@@ -173,7 +172,7 @@ export async function uploadImage(imageFile: File): Promise<void> {
 
   try {
     const response = await axios.put(
-      "https://banking-management-system-backend-nine.vercel.app/api/users/profile-picture",
+      "https://spendwise-backend-roan.vercel.app/api/users/profile-picture",
       formData,
       {
         headers: {
