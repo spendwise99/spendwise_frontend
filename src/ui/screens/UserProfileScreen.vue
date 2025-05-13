@@ -5,6 +5,7 @@ import staticData from "../store/utils";
 import CButton from "../components/CButton.vue";
 import { useUserStore } from "../store/userInfo";
 import { api, notify, uploadImage } from "../store/helpers";
+import PhoneInput from "../components/PhoneInput.vue";
 
 interface UserFormData {
   userId?: string;
@@ -14,7 +15,7 @@ interface UserFormData {
   phoneNumber: string;
   password: string;
   imageUrl: string;
-  age: number;
+  // age: number;
 }
 
 const userSession = useUserStore();
@@ -62,8 +63,7 @@ const isFormChanged = computed(() => {
     formData.value.firstName !== originalData.value.firstName ||
     formData.value.lastName !== originalData.value.lastName ||
     formData.value.phoneNumber !== originalData.value.phoneNumber ||
-    formData.value.password !== originalData.value.password ||
-    formData.value.age !== originalData.value.age
+    formData.value.password !== originalData.value.password
   );
 });
 
@@ -77,7 +77,6 @@ const handleUserUpdate = async () => {
       firstName: formData.value.firstName,
       lastName: formData.value.lastName,
       phoneNumber: formData.value.phoneNumber,
-      age: formData.value.age,
     };
 
     const updatedUser = await api.patch("/api/users", payload);
@@ -151,18 +150,20 @@ console.log(userSession.token);
               v-model="formData.email"
               disabled
             />
-            <CInput
+            <PhoneInput v-model="formData.phoneNumber" />
+
+            <!-- <CInput
               icon="mdi:phone"
               placeholder="Phone Number"
               type="text"
               v-model="formData.phoneNumber"
-            />
-            <CInput
+            /> -->
+            <!-- <CInput
               icon="mdi:cake"
               placeholder="Age"
               type="number"
               v-model.number="formData.age"
-            />
+            /> -->
 
             <div class="col-span-2">
               <CButton

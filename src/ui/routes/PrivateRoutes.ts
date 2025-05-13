@@ -2,6 +2,10 @@ import type { RouteRecordRaw } from "vue-router";
 
 const privateRoutes: RouteRecordRaw[] = [
   {
+    path: "/",
+    redirect: "/dashboard",
+  },
+  {
     path: "/dashboard",
     name: "Dashboard",
     component: () => import("@/screens/HomeScreen.vue"),

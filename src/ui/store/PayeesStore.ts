@@ -106,11 +106,38 @@ export const usePayeeStore = defineStore("payeeStore", () => {
     }
   };
 
+  interface SearchedPayee {
+    _id: string;
+    email: string;
+    userName: string;
+    firstName: string;
+    lastName: string;
+    imageUrl: string;
+  }
+  const searchedPayee = ref<SearchedPayee | null>(null);
+  const serarchNewPayee = async (id: string) => {
+    isLoading.value = true;
+    try {
+      const response = await api.get(`/api/payees/search-payee/?id=${id}`);
+      searchedPayee.value = response.data.data;
+      return true;
+    } catch (error) {
+      console.log(error);
+      isLoading.value = false;
+      notify("No User Found");
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
   return {
     isLoading,
+    searchedPayee,
     userPayeesList,
     allAppUsers,
     getUserPayees,
+    serarchNewPayee,
     getAllUsers,
     deletePayee,
     addnewPayee,

@@ -1,13 +1,100 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import CInput from "../components/CInput.vue";
 import CButton from "../components/CButton.vue";
 import Tabs from "../components/Tabs.vue";
-
 import Loading from "../components/Loading.vue";
 import { useAuthStore } from "../store/AuthStore";
 import PhoneInput from "../components/PhoneInput.vue";
+import { notify } from "../store/helpers";
 
 const authStore = useAuthStore();
+
+const step = ref(1);
+
+const emailOtp = ref("");
+const phoneOtp = ref("");
+const password = ref("");
+
+const allowedDomains = ["gmail.com", "yahoo.com", "yopmail.com"];
+
+const verifyEmail = async () => {
+  const email = authStore.signupForm.email.trim();
+  const domain = email.split("@")[1];
+
+  if (!email || !allowedDomains.includes(domain)) {
+    notify(
+      "Only gmail.com, yahoo.com, and yopmail.com emails are allowed.",
+      "error"
+    );
+    return;
+  }
+
+  const success = await authStore.SendOTP("EMAIL", email);
+  if (success) step.value = 2;
+};
+
+const verifyEmailOtp = async () => {
+  const success = await authStore.ValidateOTP(
+    "EMAIL",
+    emailOtp.value,
+    authStore.signupForm.email
+  );
+  if (success) step.value = 3;
+};
+
+const verifyPhone = async () => {
+  const phone = authStore.signupForm.phoneNumber;
+  if (!phone) {
+    notify("Please enter a valid phone number", "error");
+    return;
+  }
+
+  const success = await authStore.SendOTP("MOBILE", phone);
+  if (success) step.value = 4;
+};
+
+const verifyPhoneOtp = async () => {
+  const phone = authStore.signupForm.phoneNumber;
+  const success = await authStore.ValidateOTP("MOBILE", phoneOtp.value, phone);
+  if (success) step.value = 5;
+};
+
+const completeSignUp = async () => {
+  const success = await authStore.handleNewSignUp();
+  if (success) {
+    step.value = 6;
+  }
+};
+
+const submitPassword = async () => {
+  const isValid = validatePassword(password.value);
+  if (!isValid) return;
+
+  await authStore.setNewPassword(password.value);
+};
+
+const validatePassword = (pwd: string): boolean => {
+  const hasUppercase = /[A-Z]/.test(pwd);
+  const hasLowercase = /[a-z]/.test(pwd);
+  const hasNumber = /[0-9]/.test(pwd);
+  const hasSpecial = /[^A-Za-z0-9]/.test(pwd);
+
+  if (pwd.length < 8) {
+    notify("Password must be at least 8 characters long", "error");
+    return false;
+  }
+
+  if (!hasUppercase || !hasLowercase || !hasNumber || !hasSpecial) {
+    notify(
+      "Password must include uppercase, lowercase, number, and special character",
+      "error"
+    );
+    return false;
+  }
+
+  return true;
+};
 </script>
 
 <template>
@@ -62,61 +149,137 @@ const authStore = useAuthStore();
             Login
           </CButton>
         </form>
-        <!-- Sign Up Form -->
-        <form v-else @submit.prevent="authStore.handleSignUp" class="space-y-5">
-          <CInput
-            v-model="authStore.signupForm.firstName"
-            placeholder="First Name"
-            icon="mdi:user"
-            width="w-full"
-            required
-          />
-          <CInput
-            v-model="authStore.signupForm.lastName"
-            placeholder="Last Name"
-            icon="mdi:user"
-            width="w-full"
-            required
-          />
-          <CInput
-            v-model="authStore.signupForm.email"
-            placeholder="Email"
-            type="email"
-            required
-            icon="mdi:email"
-            width="w-full"
-          />
-          <!-- <CInput
-            type="number"
-            v-model="authStore.signupForm.phoneNumber"
-            placeholder="Phone Number"
-            icon="mdi:phone"
-            width="w-full"
-            required
-          /> -->
 
-          <PhoneInput v-model="authStore.signupForm.phoneNumber" />
-          <CInput
-            type="number"
-            v-model="authStore.signupForm.age"
-            placeholder="age"
-            icon="mdi:numeric-9-plus-circle-outline"
-            width="w-full"
-            required
-          />
+        <!-- Sign Up Form (Step-by-step) -->
+        <form v-else @submit.prevent="" class="space-y-5">
+          <!-- Step 1: Enter Email -->
+          <template v-if="step === 1">
+            <CInput
+              v-model="authStore.signupForm.email"
+              placeholder="Enter your email"
+              type="email"
+              icon="mdi:email"
+              required
+              width="w-full"
+            />
+            <CButton
+              @click="verifyEmail"
+              width="w-full"
+              height="h-10"
+              color="bg-accent"
+              textColor="text-black"
+            >
+              Verify Email
+            </CButton>
+          </template>
 
-          <CButton
-            type="submit"
-            width="w-full"
-            height="h-10"
-            color="bg-accent"
-            textColor="text-black"
-          >
-            Sign Up
-          </CButton>
+          <!-- Step 2: Email OTP -->
+          <template v-else-if="step === 2">
+            <CInput
+              v-model="emailOtp"
+              placeholder="Enter Email OTP"
+              type="text"
+              icon="mdi:lock-check"
+              required
+              width="w-full"
+            />
+            <CButton
+              @click="verifyEmailOtp"
+              width="w-full"
+              height="h-10"
+              color="bg-accent"
+              textColor="text-black"
+            >
+              Verify OTP
+            </CButton>
+          </template>
+
+          <!-- Step 3: Enter Phone -->
+          <template v-else-if="step === 3">
+            <PhoneInput v-model="authStore.signupForm.phoneNumber" />
+            <CButton
+              @click="verifyPhone"
+              width="w-full"
+              height="h-10"
+              color="bg-accent"
+              textColor="text-black"
+            >
+              Verify Phone
+            </CButton>
+          </template>
+
+          <!-- Step 4: Phone OTP -->
+          <template v-else-if="step === 4">
+            <CInput
+              v-model="phoneOtp"
+              placeholder="Enter Phone OTP"
+              type="text"
+              icon="mdi:lock-check"
+              required
+              width="w-full"
+            />
+            <CButton
+              @click="verifyPhoneOtp"
+              width="w-full"
+              height="h-10"
+              color="bg-accent"
+              textColor="text-black"
+            >
+              Verify OTP
+            </CButton>
+          </template>
+
+          <!-- Step 5: Final Info -->
+          <template v-else-if="step === 5">
+            <CInput
+              v-model="authStore.signupForm.firstName"
+              placeholder="First Name"
+              icon="mdi:user"
+              width="w-full"
+              required
+            />
+            <CInput
+              v-model="authStore.signupForm.lastName"
+              placeholder="Last Name"
+              icon="mdi:user"
+              width="w-full"
+              required
+            />
+
+            <CButton
+              @click="completeSignUp"
+              type="submit"
+              width="w-full"
+              height="h-10"
+              color="bg-accent"
+              textColor="text-black"
+            >
+              Submit
+            </CButton>
+          </template>
+
+          <template v-else-if="step === 6">
+            <CInput
+              v-model="password"
+              type="password"
+              placeholder="Create Password"
+              icon="mdi:lock"
+              width="w-full"
+            />
+            <CButton
+              @click="submitPassword"
+              width="w-full"
+              height="h-10"
+              color="bg-accent"
+              textColor="text-black"
+            >
+              Set Password
+            </CButton>
+          </template>
         </form>
       </div>
     </Transition>
+
     <Loading v-else />
   </main>
 </template>

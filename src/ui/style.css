@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "vue-select/dist/vue-select.css";
+@import "leaflet/dist/leaflet.css";
 
 @theme {
   --color-dark: #210f37; /* Background */

@@ -4,6 +4,7 @@ import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { useUserStore } from "./userInfo";
 import { jwtDecode } from "jwt-decode";
+import { useActivityLogs } from "./ActivityLogs";
 
 export const useAuthStore = defineStore("authStore", () => {
   const tabOptions = ref([
@@ -26,51 +27,77 @@ export const useAuthStore = defineStore("authStore", () => {
     userName: "",
     email: "",
     phoneNumber: "",
-    age: "",
   });
   const router = useRouter();
   const isLoading = ref(false);
   const isError = ref(false);
+  const logs = useActivityLogs();
 
-  //================SIGNUPFORM=========================
-  const handleSignUp = async () => {
-    const data = signupForm.value;
+  //================CREATE_ACTIVITY_LOG====================
 
-    const validationRules: ValidationRules = {
-      firstName: { required: true },
-      lastName: { required: true },
-      email: { required: true, type: "email" },
-      phoneNumber: { required: true },
-      age: { required: true, type: "number" },
-    };
-    console.log(signupForm.value, "===>");
-    const { valid, errors } = validateForm(data, validationRules);
-
-    if (!valid) {
-      const firstError = Object.values(errors)[0];
-      notify(firstError, "error");
-      return;
-    }
-    localStorage.setItem("otpEmail", data.email);
+  //================GETUSERIPANDLOCATION===============
+  const getUserIpAndLocation = async () => {
     try {
-      const payload = {
-        ...data,
-        phoneNumber: String(data.phoneNumber),
-        userName: `${data.firstName} ${data.lastName}`.trim(),
+      const res = await fetch("https://ipinfo.io/json?token=25e9d41a5fa27b");
+      const data = await res.json();
+
+      const userLocation = {
+        city: data.city,
+        ipAddress: data.ip,
+        region: data.region,
+        country: data.country,
+        postal: data.postal,
+        org: data.org,
+        location: data.loc,
+        timezone: data.timezone,
+        hostname: data.hostname,
       };
-      isLoading.value = true;
-      const response = await api.post("api/auth/signup", payload);
-      console.log(response.data);
-      router.push("/verify-otp");
-      isLoading.value = false;
-    } catch (error: any) {
-      console.log(error);
-      isLoading.value = false;
-      notify(error?.response?.data?.message || "Signup failed", "error");
-    } finally {
-      isLoading.value = false;
+      await logs.createActivityLog(userLocation);
+      return userLocation;
+    } catch (error) {
+      console.warn("Failed to get IP/location:", error);
+      return { userIp: null, userLocation: null };
     }
   };
+
+  //================SIGNUPFORM=========================
+  // const handleSignUp = async () => {
+  //   const data = signupForm.value;
+
+  //   const validationRules: ValidationRules = {
+  //     firstName: { required: true },
+  //     lastName: { required: true },
+  //     email: { required: true, type: "email" },
+  //     phoneNumber: { required: true },
+  //   };
+  //   console.log(signupForm.value, "===>");
+  //   const { valid, errors } = validateForm(data, validationRules);
+
+  //   if (!valid) {
+  //     const firstError = Object.values(errors)[0];
+  //     notify(firstError, "error");
+  //     return;
+  //   }
+  //   localStorage.setItem("otpEmail", data.email);
+  //   try {
+  //     const payload = {
+  //       ...data,
+  //       phoneNumber: String(data.phoneNumber),
+  //       userName: `${data.firstName} ${data.lastName}`.trim(),
+  //     };
+  //     isLoading.value = true;
+  //     const response = await api.post("api/auth/signup", payload);
+  //     console.log(response.data);
+  //     router.push("/verify-otp");
+  //     isLoading.value = false;
+  //   } catch (error: any) {
+  //     console.log(error);
+  //     isLoading.value = false;
+  //     notify(error?.response?.data?.message || "Signup failed", "error");
+  //   } finally {
+  //     isLoading.value = false;
+  //   }
+  // };
 
   //===============OTPVERIFICATION==================
   const verifyOTP = async (otp: string) => {
@@ -109,24 +136,19 @@ export const useAuthStore = defineStore("authStore", () => {
   //===============SET_PASSWORD==================
 
   const setNewPassword = async (password: string) => {
-    if (password.length < 4) {
-      notify("Password Length Must be Greater than 4", "info");
-      return;
-    }
     isLoading.value = true;
     const payload = {
       email: signupForm.value.email,
       password: password,
     };
+
     try {
       const response = await api.post("/api/auth/set-password", payload);
-      isLoading.value = false;
       currentTab.value = "login";
       router.push("/login");
       console.log(response.data);
     } catch (error) {
       notify("Unable to set Password");
-      isLoading.value = false;
     } finally {
       isLoading.value = false;
     }
@@ -163,6 +185,7 @@ export const useAuthStore = defineStore("authStore", () => {
       notify("Login successful", "success");
       userSession.setToken(accessToken);
       userSession.setUser(user);
+      await getUserIpAndLocation();
       router.push({ name: "Dashboard" });
     } catch (error) {
       notify("Invalid email or password", "error");
@@ -204,6 +227,84 @@ export const useAuthStore = defineStore("authStore", () => {
     }
   };
 
+  //===============New_ SENARIO_AUTHENTIAION======================
+
+  async function SendOTP(type: string, item: string): Promise<boolean> {
+    isLoading.value = true;
+
+    const payload: { type: string; email?: string; phone?: string } = {
+      type,
+      ...(type === "EMAIL" ? { email: item } : { phone: item }),
+    };
+
+    try {
+      const response = await api.post("/api/auth/request-otp/", payload);
+      console.log(response.data);
+      notify(`OTP sent successfully to ${item}`, "success");
+      return true;
+    } catch (error) {
+      console.error("OTP send failed:", error);
+      notify("Failed to send OTP. Please try again.", "error");
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function ValidateOTP(
+    type: string,
+    otp: string,
+    contact: string
+  ): Promise<boolean> {
+    isLoading.value = true;
+
+    const payload: {
+      type: string;
+      otp: string;
+      email?: string;
+      phone?: string;
+    } = {
+      type,
+      otp,
+      ...(type === "EMAIL" ? { email: contact } : { phone: contact }),
+    };
+
+    try {
+      const response = await api.post("/api/auth/verify-otp", payload);
+      console.log(response.data);
+      notify("OTP verified successfully", "success");
+      return true;
+    } catch (error) {
+      console.error("OTP validation failed:", error);
+      notify("OTP verification failed. Please try again.", "error");
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  const handleNewSignUp = async () => {
+    isLoading.value = true;
+    const payload = {
+      email: signupForm.value.email,
+      userName: signupForm.value.firstName + signupForm.value.lastName,
+      firstName: signupForm.value.firstName,
+      lastName: signupForm.value.lastName,
+      phoneNumber: signupForm.value.phoneNumber,
+    };
+    try {
+      const response = await api.post("/api/auth/signup/", payload);
+      console.log(response.data);
+      return true;
+    } catch (error) {
+      console.log(error);
+      notify("Unable to Sign Up", "error");
+      isLoading.value = false;
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  };
   return {
     signupForm,
     isLoading,
@@ -214,9 +315,11 @@ export const useAuthStore = defineStore("authStore", () => {
     loginFormData,
     handleLogin,
     isTokenValid,
+    handleNewSignUp,
+    ValidateOTP,
     requestNewOtp,
-    handleSignUp,
     verifyOTP,
     setNewPassword,
+    SendOTP,
   };
 });

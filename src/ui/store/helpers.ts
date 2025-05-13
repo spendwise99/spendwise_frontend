@@ -224,6 +224,6 @@ export function validatePayee(id: string | number) {
     return false;
   }
 
-  const payee = payeeStore.allAppUsers.find((item) => item.userId === id);
+  const payee = payeeStore.userPayeesList.find((item) => item._id === id);
   return payee || false;
 }

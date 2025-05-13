@@ -114,3 +114,29 @@ export interface ChartData {
   date: string;
   time: string;
 }
+
+// interfaces/ActivityLog.ts
+export interface Activity {
+  city: string;
+  ipAddress: string;
+  region: string;
+  country: string;
+  postal: string;
+  org: string;
+  location: string;
+  timezone: string;
+}
+
+export interface ActivityLog {
+  _id: string;
+  userId: string;
+  activity: Activity;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+}
+
+export interface ActivityLogsResponse {
+  activities: ActivityLog[];
+  message: string;
+}

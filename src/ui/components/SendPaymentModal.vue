@@ -44,6 +44,7 @@ const validatedPayee = ref<Partial<AppUser>>({});
 
 const onUserSelection = () => {
   const { currentStep, selectedUser, amount } = paymentOptions.value;
+  console.log(selectedUser);
 
   if (currentStep === 0 && !selectedUser) {
     return notify("Please select a user", "error");

@@ -44,8 +44,6 @@ function getTransactionType(
 
   return "Other";
 }
-
-console.log(props.rows);
 </script>
 
 <template>
