@@ -6,7 +6,7 @@ import Tabs from "../components/Tabs.vue";
 import Loading from "../components/Loading.vue";
 import { useAuthStore } from "../store/AuthStore";
 import PhoneInput from "../components/PhoneInput.vue";
-import { notify } from "../store/helpers";
+import { clearAllLocalStorage, notify } from "../store/helpers";
 
 const authStore = useAuthStore();
 
@@ -72,6 +72,10 @@ const submitPassword = async () => {
   if (!isValid) return;
 
   await authStore.setNewPassword(password.value);
+
+  clearAllLocalStorage();
+  authStore.currentTab = "login";
+  step.value = 1;
 };
 
 const validatePassword = (pwd: string): boolean => {
@@ -121,34 +125,40 @@ const validatePassword = (pwd: string): boolean => {
     >
       <div :key="authStore.currentTab">
         <!-- Login Form -->
-        <form
-          v-if="authStore.currentTab === 'login'"
-          @submit.prevent="authStore.handleLogin"
-          class="space-y-5"
-        >
-          <CInput
-            v-model="authStore.loginFormData.email"
-            placeholder="Enter your email"
-            icon="mdi:email"
-            width="w-full"
-          />
-          <CInput
-            type="password"
-            v-model="authStore.loginFormData.password"
-            placeholder="Enter your password"
-            icon="mdi:lock"
-            width="w-full"
-          />
-          <CButton
-            type="submit"
-            width="w-full"
-            height="h-10"
-            color="bg-accent"
-            textColor="text-black"
+        <!-- Login Form -->
+        <div v-if="authStore.currentTab === 'login'">
+          <div v-if="authStore.isLocked" class="text-red-600 text-center py-4">
+            Your account is locked. Please try again after 24 hours.
+          </div>
+          <form
+            v-else
+            @submit.prevent="authStore.handleLogin"
+            class="space-y-5"
           >
-            Login
-          </CButton>
-        </form>
+            <CInput
+              v-model="authStore.loginFormData.email"
+              placeholder="Enter your email"
+              icon="mdi:email"
+              width="w-full"
+            />
+            <CInput
+              type="password"
+              v-model="authStore.loginFormData.password"
+              placeholder="Enter your password"
+              icon="mdi:lock"
+              width="w-full"
+            />
+            <CButton
+              type="submit"
+              width="w-full"
+              height="h-10"
+              color="bg-accent"
+              textColor="text-black"
+            >
+              Login
+            </CButton>
+          </form>
+        </div>
 
         <!-- Sign Up Form (Step-by-step) -->
         <form v-else @submit.prevent="" class="space-y-5">

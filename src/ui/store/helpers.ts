@@ -227,3 +227,7 @@ export function validatePayee(id: string | number) {
   const payee = payeeStore.userPayeesList.find((item) => item._id === id);
   return payee || false;
 }
+
+export function clearAllLocalStorage() {
+  localStorage.clear();
+}

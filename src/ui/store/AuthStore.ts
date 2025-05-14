@@ -154,9 +154,46 @@ export const useAuthStore = defineStore("authStore", () => {
     }
   };
 
-  //===============Login_USER=========================
+  //=============Brute forece check================
 
+  const MAX_ATTEMPTS = 3;
+  const LOCKOUT_DURATION_MS = 24 * 60 * 60 * 1000;
+
+  function getLockInfo() {
+    const lockInfo = localStorage.getItem("loginLockInfo");
+    return lockInfo ? JSON.parse(lockInfo) : { attempts: 0, lockTime: null };
+  }
+
+  function saveLockInfo(info: { attempts: number; lockTime: number | null }) {
+    localStorage.setItem("loginLockInfo", JSON.stringify(info));
+  }
+
+  function isLockedOut(): boolean {
+    const { lockTime } = getLockInfo();
+    if (!lockTime) return false;
+
+    const now = Date.now();
+    const diff = now - lockTime;
+    return diff < LOCKOUT_DURATION_MS;
+  }
+
+  function resetLockInfo() {
+    saveLockInfo({ attempts: 0, lockTime: null });
+  }
+
+  const isLocked = ref(false);
+  isLocked.value = isLockedOut();
+  //===============Login_USER=========================
   const handleLogin = async () => {
+    const lockInfo = getLockInfo();
+
+    // Check if user is locked out
+    if (isLockedOut()) {
+      notify("Account is locked. Please try again after 24 hours.", "error");
+      isLocked.value = true; // used in template to hide login UI
+      return;
+    }
+
     const data = loginFormData.value;
 
     const validationRules: ValidationRules = {
@@ -178,17 +215,36 @@ export const useAuthStore = defineStore("authStore", () => {
       const response = await api.post("/api/auth/login", data);
       const { accessToken, refreshToken, user } = response.data;
 
+      // Login success: reset lock info
+      resetLockInfo();
+
       localStorage.setItem("accessToken", accessToken);
       localStorage.setItem("refreshToken", refreshToken);
-
       localStorage.setItem("user", JSON.stringify(user));
+
       notify("Login successful", "success");
       userSession.setToken(accessToken);
       userSession.setUser(user);
       await getUserIpAndLocation();
       router.push({ name: "Dashboard" });
     } catch (error) {
-      notify("Invalid email or password", "error");
+      // Increment failed attempt
+      const attempts = lockInfo.attempts + 1;
+      const lockTime = attempts >= MAX_ATTEMPTS ? Date.now() : null;
+
+      saveLockInfo({ attempts, lockTime });
+
+      if (attempts >= MAX_ATTEMPTS) {
+        notify("Account is locked. Please try again after 24 hours.", "error");
+        isLocked.value = true;
+      } else {
+        notify(
+          `Invalid email or password. ${
+            MAX_ATTEMPTS - attempts
+          } attempt(s) left.`,
+          "error"
+        );
+      }
     } finally {
       isLoading.value = false;
     }
@@ -312,6 +368,7 @@ export const useAuthStore = defineStore("authStore", () => {
     tabOptions,
     currentTab,
     otp,
+    isLocked,
     loginFormData,
     handleLogin,
     isTokenValid,
